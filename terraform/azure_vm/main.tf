@@ -31,7 +31,8 @@ resource "azurerm_subnet" "MyTFSubnet" {
   
 }
 resource "azurerm_public_ip" "MyTFPublicIP" {
-  name                = "MyTFPublicIP"
+  count = 2
+  name                = "MyTFPublicIP${count.index}"
   resource_group_name = azurerm_resource_group.myTFResourceGroup.name
   location            = azurerm_resource_group.myTFResourceGroup.location
   allocation_method   = "Static"
@@ -43,14 +44,15 @@ resource "azurerm_public_ip" "MyTFPublicIP" {
 }
 
 resource "azurerm_network_interface" "MyTFNetInterface" {
-  name = "MyTFNetInterface"
+  count =2
+  name = "MyTFNetInterface${count.index}"
   location = azurerm_resource_group.myTFResourceGroup.location
   resource_group_name = azurerm_resource_group.myTFResourceGroup.name
   ip_configuration {
     name = "internal"
     subnet_id = azurerm_subnet.MyTFSubnet.id
     private_ip_address_allocation = "Dynamic"
-    public_ip_address_id = azurerm_public_ip.MyTFPublicIP.id
+    public_ip_address_id = element(azurerm_public_ip.MyTFPublicIP.*.id, count.index)
   }
 }
 
@@ -66,9 +68,9 @@ resource "azurerm_linux_virtual_machine" "myTFLinuxVM" {
   location            = azurerm_resource_group.myTFResourceGroup.location
   size                = "Standard_B1s"
   admin_username      = "adminuser"
-  network_interface_ids = [
-    azurerm_network_interface.MyTFNetInterface.id,
-  ]
+  network_interface_ids = [element(azurerm_network_interface.MyTFNetInterface.*.id, count.index)  ]
+
+  
 
   admin_ssh_key {
     username   = "adminuser"
