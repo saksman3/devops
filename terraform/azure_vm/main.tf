@@ -60,6 +60,33 @@ resource "tls_private_key" "MyTFssh" {
     algorithm = "RSA"
     rsa_bits = 4096
 }
+output "tls_private_key" {
+    value = tls_private_key.MyTFssh.private_key_pem 
+    sensitive = true
+}
+output "public_ip" {
+ value = azurerm_public_ip.MyTFPublicIP.*.ip_address
+}
+resource "azurerm_network_security_group" "myTFNetSec" {
+  name ="SecurityGroup"
+  location = azurerm_resource_group.myTFResourceGroup.location
+  resource_group_name = azurerm_resource_group.myTFResourceGroup.name 
+}
+
+resource "azurerm_network_security_rule" "myTFSecRule" {
+  name                        = "myTFSecRule"
+  priority                    = 100
+  direction                   = "Inbound"
+  access                      = "Allow"
+  protocol                    = "TCP"
+  source_port_range           = "22"
+  destination_port_range      = "*"
+  source_address_prefix       = "*"
+  destination_address_prefix  = "*"
+  resource_group_name         = azurerm_resource_group.myTFResourceGroup.name
+  network_security_group_name = azurerm_network_security_group.myTFNetSec.name
+}
+
 
 resource "azurerm_linux_virtual_machine" "myTFLinuxVM" {
   count = 2
@@ -67,15 +94,13 @@ resource "azurerm_linux_virtual_machine" "myTFLinuxVM" {
   resource_group_name = azurerm_resource_group.myTFResourceGroup.name
   location            = azurerm_resource_group.myTFResourceGroup.location
   size                = "Standard_B1s"
-  admin_username      = "adminuser"
+  admin_username      = "azureuser"
+  admin_password      = "Asd1!2@2"
+  disable_password_authentication =false
   network_interface_ids = [element(azurerm_network_interface.MyTFNetInterface.*.id, count.index)  ]
 
   
 
-  admin_ssh_key {
-    username   = "adminuser"
-    public_key = tls_private_key.MyTFssh.public_key_openssh
-  }
 
   os_disk {
     caching              = "ReadWrite"
@@ -89,3 +114,18 @@ resource "azurerm_linux_virtual_machine" "myTFLinuxVM" {
     version = "latest" 
    }
 }
+#resource "azurerm_dev_test_global_vm_shutdown_schedule" "shutdown_schedule" {
+#  count =2
+#  virtual_machine_id = azurerm_linux_virtual_machine.myTFLinuxVM${count.index}.id
+#  location           = azurerm_resource_group.myTFResourceGroup.location
+#  enabled            = true
+
+#  daily_recurrence_time = "1100"
+#  timezone              = "South Africa Standard Time"
+
+#  notification_settings {
+#    enabled         = true
+#    time_in_minutes = "60"
+#    webhook_url     = "https://sample-webhook-url.example.com"
+#  }
+#}
